@@ -3,11 +3,9 @@ const 	Router 		= require('telegraf/router')
 const 	Composer 	= require('telegraf/composer')
 const 	Extra 		= require('telegraf/extra')
 const 	session 	= require('telegraf/session')
-const 	Stage 		= require('telegraf/stage')
 const 	Markup 		= require('telegraf/markup')
-const 	WizardScene = require('telegraf/scenes/wizard')
 const 	model 		= require("./model")
-var		currency 	= require("./currency")
+const	currency 	= require("./currency")
 
 ///////////////////////////////////////////
 
@@ -15,57 +13,68 @@ const BOT_TOKEN = "504639171:AAE-W3XHavp1UtTfnXTWVSdg6QVghEvatLA"
 const bot 		= new Telegraf(BOT_TOKEN)
 const languages = ['🇺🇸 English', '🇷🇺 Русский']
 const currencies = ['🇺🇸 USD', '🇷🇺 RUR']
+const banks = {
+	"USD":[["Bank of America"],[ "Raiffaissen"],["Citibank"]],
+	"RUR":[["QIWI", "Сбербанк"],["Альфа-банк", "Газпромбанк"],["Райфайзен", "ВТБ 24"]]
+}
+const transfer_min = 1
 const language 	= 
 {
 	"russian":
 	{
 		"welcome":"Добро пожаловать в *AnyCoin XRP-Ripple Бот*",
-		"currency":"Выбрать валюту",
-		"buy_xrp":"Купить XRP",
-		"sell_xrp":"Продать XRP",
-		"wallet":"Кошелёк",
+		"currency":"💱Выбрать валюту",
+		"buy_xrp":"📈 Купить XRP",
+		"sell_xrp":"📉 Продать XRP",
+		"sell_xrp_not_allowed":"Продажа доступна от баланса "+transfer_min+" XRP",
+		"wallet":"🔑 Кошелёк",
 		"your_wallet":"Ваш ID Кошелька XRP",
 		"use_wallet":"Используйте его чтобы принимать XRP",
-		"balance":"Ваш Баланс ",
+		"balance":"Ваш Баланс",
 		"change_language":"Сменить язык",
 		"transfer_xrp":"Вывести средства",
+		"transfer_xrp_not_allowed":"Вывод средств доступен от баланса "+transfer_min+" XRP",
 		"market_price":"Рыночная Стоимость",
 		"menu_text":"Главное меню",
-		"select_currency":"Выберите валюту"
+		"select_currency":"Выберите валюту",
+		"sell_xrp_select_bank":"Выберите банк"
 	},
 	"english":
 	{
 		"welcome":"Welcome to *AnyCoin XRP-Ripple Bot*",
-		"currency":"Select currency",
-		"buy_xrp":"Buy XRP",
-		"sell_xrp":"Sell XRP",
-		"wallet":"Wallet",
+		"currency":"💱Select currency",
+		"buy_xrp":"📈 Buy XRP",
+		"sell_xrp":"📉 Sell XRP",
+		"sell_xrp_not_allowed":"Selling is available starting from balance "+transfer_min+" XRP",
+		"wallet":"🔑 Wallet",
 		"your_wallet":"Your XRP Wallet ID",
 		"use_wallet":"Use it to receive XRP",
-		"balance":"Your Balance ",
+		"balance":"Your Balance",
 		"change_language":"Change language",
 		"transfer_xrp":"Transfer Balance",
+		"transfer_xrp_not_allowed":"Transfer is available starting from balance "+transfer_min+" XRP",
 		"market_price":"Market Price",
 		"menu_text":"Main menu",
-		"select_currency":"Select a currency"
+		"select_currency":"Select a currency",
+		"sell_xrp_select_bank":"Select a bank"
 	}
 }
 
 const mongoSession = function(ctx, next) {
 
-	var id;
-	
-	if(ctx.update && ctx.update.message && ctx.update.message.from.id) id = ctx.update.message.from.id
-	if(ctx.from.id) id = ctx.from.id
-	
-	ctx.id = id;
+	if(ctx.update && ctx.update.message && ctx.update.message.from.id) ctx.id = ctx.update.message.from.id
+	if(ctx.from.id) ctx.id = ctx.from.id
+
+	const id = ctx.id;
 
 	if(next && ctx.session_data) return next()
 
 	model._user.findOne({telegram_id:id.toString()}, function(err, data){
 		if(err) console.error(err)
+	
 		ctx.session_data = data;
-		if(next) next()
+
+		if(next) next(ctx)
 	})
 }
 
@@ -88,8 +97,8 @@ const selectLanguage = ctx => {
 }
 
 const mainMenu = (ctx) => {
-	console.log(ctx.session_data)
-	const lang = ctx.session_data.language
+
+	const lang = ctx.session_data.language 
 	const welcome = language[lang].welcome
 	const market = ctx.session_data.currency + " / XRP"
 	const value = currency[ctx.session_data.currency.toLowerCase()]
@@ -118,8 +127,7 @@ const mainMenu = (ctx) => {
 
 const setLanguage = (ctx, language) => {
 	console.log("set language "+language)
-	console.log(ctx.session_data)
-	var currency;
+	var old, currency;
 	if(ctx.session_data) currency = ctx.session_data.currency
 	return new Promise((resolve, reject) => {
 		model._user.update(
@@ -127,10 +135,15 @@ const setLanguage = (ctx, language) => {
 		   { "language": language },
 		   function(err, numberAffected, rawResponse) {
 		   		console.log(err,numberAffected, rawResponse)
+		   		old = ctx.session_data;
 		   		ctx.session_data = null;
 		   		mongoSession(ctx, function() {
-		   			if(!currency) return selectCurrency(ctx).then(resolve)
-		   			return mainMenu(ctx).then(resolve)
+		   			console.log("after update mongo")
+		   			var new_ctx = ctx
+		   			new_ctx.session_data = old
+		   			new_ctx.session_data.language = language;
+		   			if(!currency) return selectCurrency(new_ctx).then(resolve)
+		   			return mainMenu(new_ctx).then(resolve)
 		   		})
 		   } 
 		)
@@ -138,15 +151,22 @@ const setLanguage = (ctx, language) => {
 }
 
 const setCurrency = (ctx, currency) => {
+	var old;
 	return new Promise((resolve, reject) => {
 		model._user.update(
 		   { telegram_id: ctx.id },
 		   { "currency": currency },
 		   (err, numberAffected, rawResponse) => {
 		   		console.log(err,numberAffected, rawResponse)
+		   		old = ctx.session_data;
 		   		ctx.session_data = null;
 		   		mongoSession(ctx, () => {
-					mainMenu(ctx)
+		   			console.log("== after setting currency ==")
+		   			var new_ctx = ctx
+		   			new_ctx.session_data = old
+		   			new_ctx.session_data.currency = currency;
+		   			console.log(new_ctx.session_data)
+					mainMenu(new_ctx)
 		   		})
 		   } 
 		)
@@ -172,9 +192,28 @@ const createUser = (ctx) => {
 		  	if (err) return reject(err)
 	    	console.log('======= new user =====');
 	    	console.log(data)
-	    	resolve()
+	    	model._user.findOne({telegram_id:from.id.toString()}, function(err, data)
+	    	{
+				if(err) console.error(err)
+				ctx.session_data = data;
+		    	resolve(ctx)
+			})
 		})
 	})
+}
+
+const bankKeyboard = (ctx, operation) => {
+	const lang = ctx.session_data.language
+	const c = ctx.session_data.currency
+	const b = banks[c]
+	const keyboard = []
+	for (var i = 0; i < b.length; i++) {
+		for (var d = 0; d < b[i].length; d++) {
+			if(!keyboard[i]) keyboard[i] = []
+			keyboard[i].push(Markup.callbackButton(b[i][d], operation+" bank"))
+		}
+	}
+	return ctx.reply(language[lang].sell_xrp_select_bank,Markup.inlineKeyboard(keyboard).extra())
 }
 
 bot.use(session())
@@ -182,13 +221,14 @@ bot.use(session())
 bot.use(mongoSession)
 
 bot.command('start', ctx => {
-	model._user.remove({}, function() {
-		if(ctx.session_data == null) createUser(ctx).catch(err => {
-			console.error(err)
-		})
-		selectLanguage(ctx)
+	if(ctx.session_data == null) return createUser(ctx)
+	.then(context => {
+		selectLanguage(context)
 	})
-
+	.catch(err => {
+		console.error(err)
+	})
+	selectLanguage(ctx)
 })
 
 bot.hears('🇺🇸 English', ctx => setLanguage(ctx, "english"))
@@ -202,47 +242,72 @@ bot.action('currency', ctx => selectCurrency(ctx))
 
 bot.action("transfer_xrp", ctx => {
 	const lang = ctx.session_data.language
-	ctx.reply("*"+language[lang].transfer_xrp+"*", {parse_mode:"Markdown"})
-})
-
-bot.action("currency", ctx => {
-	const lang = ctx.session_data.language
-	ctx.reply("*"+language[lang].currency+"*", {parse_mode:"Markdown"})
+	const wallet = ctx.session_data.wallet
+	currency.api.getAccountInfo(wallet)
+	.then(data => {
+		const balance = data.xrpBalance + " XRP"
+		ctx.reply("*"+language[lang].transfer_xrp+"*", {parse_mode:"Markdown"})
+	})
+	.catch(err => {		
+		console.error(err)
+		ctx.reply("*"+language[lang].transfer_xrp_not_allowed+"*", {parse_mode:"Markdown"})
+	})
 })
 
 bot.action("buy_xrp", ctx => {
+	const curr = ctx.session_data.currency
 	const lang = ctx.session_data.language
-	ctx.reply("*"+language[lang].buy_xrp+"*", {parse_mode:"Markdown"})
+	return bankKeyboard(ctx, "buy")
 })
 
+bot.action("buy bank", ctx => {
+	// console.log(ctx.update.callback_query)
+	console.log(ctx.callbackQuery)
+})
+
+
 bot.action("sell_xrp", ctx => {
+
 	const lang = ctx.session_data.language
-	ctx.reply("*"+language[lang].sell_xrp+"*", {parse_mode:"Markdown"})
+	const wallet = ctx.session_data.wallet
+	const curr = ctx.session_data.currency
+	const replyWithNotAllowed = () => {
+		ctx.reply("*"+language[lang].sell_xrp_not_allowed+"*", {parse_mode:"Markdown"})
+	}
+	return currency.api.connect()
+	.then(()=>{ return currency.api.getAccountInfo(wallet) })
+	.then(data => {
+		const balance = data.xrpBalance + " XRP"
+		if(balance < 1) return replyWithNotAllowed()
+		return bankKeyboard(ctx, "sell")
+	})
+	.catch(err => {		
+		console.error(err)
+		replyWithNotAllowed()
+	})
+
 })
 
 bot.action("wallet", ctx => {
 
 	const lang = ctx.session_data.language
-	const text = language[lang].your_wallet+"\n"+language[lang].use_wallet
 	const text2 = language[lang].balance
 	const sendUI = function() 
 	{
-		const wallet = ctx.session_data.wallet
-		console.log("account info for wallet")
-		console.log(wallet)
-		currency.api.getAccountInfo(wallet)
+		const wallet 	= ctx.session_data.wallet
+		const text 		= language[lang].your_wallet+": *"+wallet+"*\n"+language[lang].use_wallet
+		currency.api.connect().then(()=>{ return currency.api.getAccountInfo(wallet) })
 		.then(data => {
 
 			console.log(data)
-
 			const balance = data.xrpBalance + " XRP"
-			ctx.reply("*"+wallet+"*\n"+text+"\n"+text2+" *"+balance+"*", {parse_mode:"Markdown"})
+			ctx.reply(text+"\n"+text2+" *"+balance+"*", {parse_mode:"Markdown"})
 		})
 		.catch(err => {		
 			console.error(err)
 
 			const balance = "0 XRP"
-			ctx.reply("*"+wallet+"*\n"+text+"\n"+text2+" *"+balance+"*", {parse_mode:"Markdown"})
+			ctx.reply(text+"\n"+text2+" *"+balance+"*", {parse_mode:"Markdown"})
 		})
 	}
 	if(!ctx.session_data.wallet) return currency.api.connect()

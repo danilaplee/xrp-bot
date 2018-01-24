@@ -42,28 +42,17 @@ const bankReply = (ctx, bank, type) => {
 	const lang = ctx.session_data.language
 	const no_offers = language[lang].no_offers
 	return bankFind(bank, type)
-	.then(function(data){
-		if(data.length == 0) return ctx.reply(no_offers)
+	.then(function(_data){
+		if(_data.length == 0) return ctx.reply(no_offers)
+		var title = language[lang][type+"_orders"] + " " + bank
+		var keyboard = []
+		for (var i = 0; i < _data.length; i++) {
+			const text = _data[i].name + ": " + _data[i].bank + " / " + _data[i].price + " " + _data[i].currency
+			keyboard.push([])
+			keyboard[i].push(Markup.callbackButton(text, "open_offer:"+_data[i]._id))
+		}
+		ctx.reply(title,Markup.inlineKeyboard(keyboard).resize().extra())
 	})
-}
-
-const checkFormSum = (txt) => {
-	if(!txt) return null;
-	var split = txt.split(" - ")
-	if(split.length == 2) return split
-	return null;
-}
-
-const createOrder = (ctx, type) => {
-	var data = checkFormSum(ctx.update.message.text)
-	if(!data) {
-		const lang = ctx.session_data.language
-		const message = language[lang].invalid_sum
-		ctx.reply(message)
-		return console.log(ctx.update.text)
-	}
-	console.log("Creating order", data)
-	return ctx.reply("creating")
 }
 
 module.exports.injectServices = (services) => {
@@ -96,7 +85,8 @@ module.exports.my_offers 	= (ctx) => {
 			if(_data.length == 0) return ctx.reply(no_my_offers)
 			var keyboard = []
 			for (var i = 0; i < _data.length; i++) {
-				const text = _data[i].name + ": " + _data[i].bank + " / " + _data[i].price + " " + _data[i].currency
+				const operation = _data[i].type
+				const text = operation+": "+_data[i].name + ": " + _data[i].bank + " / " + _data[i].price + " " + _data[i].currency
 				keyboard.push([])
 				keyboard[i].push(Markup.callbackButton(text, "edit_offer:"+_data[i]._id))
 			}
@@ -111,8 +101,8 @@ module.exports.edit_offer   = (ctx, id) => {
 	const remove = language[lang].delete_offer
 	model._offer.find({_id:id}).exec(function(err, _data){
 		if(_data.length == 0) return user.mainMenu(ctx);
-		const frase = language[lang].edit_question + _data[0].name
-		const keyboard = Markup.inlineKeyboard([Markup.callbackButton(edit, "menu"), Markup.callbackButton(remove, "delete_offer:"+id)])
+		const frase = language[lang].edit_question + _data[0].name + "?"
+		const keyboard = Markup.inlineKeyboard([Markup.callbackButton(cancel, "menu"), Markup.callbackButton(remove, "delete_offer:"+id)])
 		return ctx.reply(frase, keyboard.oneTime().resize().extra());
 	})
 } 
@@ -121,6 +111,14 @@ module.exports.delete_offer = (ctx, id) => {
 	model._offer.remove({_id:id}).exec(function(err, _data){
 		return module.exports.my_offers(ctx)
 	})
+}
+
+module.exports.open_offer = (ctx, id) => {
+
+	model._offer.find({_id:id}).exec(function(err, _data){
+		console.log(_data)
+	})
+
 }
 
 /////////////////// OFFER SCENE /////////////////// 
@@ -260,9 +258,7 @@ const submitOfferInfo = (ctx, type) => {
 const submitOffer = ctx => {
 	const lang = ctx.session_data.language
 	const offer = ctx.scene.state.offer
-	var action
 	if(ctx.message.text == language[lang].save) {
-		action = "save"
 		var o = new model._offer(offer)
 			o.save(function(err, data) 
 			{
@@ -271,7 +267,6 @@ const submitOffer = ctx => {
 		    	module.exports.my_offers(ctx)
 			});
 	}
-	console.log("==== action: "+action+" ====")
 }
 
 const cancelOffer = (ctx) => {

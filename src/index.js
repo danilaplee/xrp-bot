@@ -20,6 +20,7 @@ const 	offers 		= require("./offers")
 const 	mSession 	= require("./mongoSession")
 
 //////ASSIGN GLOBALS///////
+
 const selectCurrency 	= user.selectCurrency
 const selectLanguage 	= user.selectLanguage
 const setLanguage 		= user.setLanguage
@@ -107,6 +108,7 @@ bot.on('callback_query', ctx => {
 	if(action == "sellbank") return offers.BankSell(ctx, data[1]) 
 	if(action == "edit_offer") return offers.edit_offer(ctx, data[1])
 	if(action == "delete_offer") return offers.delete_offer(ctx, data[1])
+	if(action == "open_offer") return offers.open_offer(ctx, data[1])
 })
 
 bot.startPolling()

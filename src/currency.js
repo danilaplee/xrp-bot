@@ -9,7 +9,8 @@ const xrp_rur = "https://api.cryptonator.com/api/ticker/xrp-rur"
 
 
 class Currency {
-	constructor() {
+	constructor() 
+	{
 		this.api = api
 		
 		this.api.connect().then(() => {

@@ -5,6 +5,8 @@ const mongoose 	= require('mongoose');
 const models = {
 	"_user":mongoose.model('xrp_user', { 
 		username: String,
+		is_waiting_for_sell_sum:String,
+		is_waiting_for_buy_sum:String,
 		first_name:String,
 		last_name:String,
 		is_bot:Boolean,
@@ -25,8 +27,10 @@ const models = {
 		price:Number,
 		currency:String,
 		bank:String,
-		volume_min: Number, 
-		volume_max:Number, 
+		type:String,
+		description:String,
+		min_value:Number, 
+		max_value:Number, 
   		updated: { type: Date, default: Date.now } 
  	}),
 	"_trade":mongoose.model('xrp_trade', {

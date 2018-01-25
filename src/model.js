@@ -1,12 +1,12 @@
 const mongoose 	= require('mongoose');
-	  mongoose.connect('mongodb://localhost/test', { useMongoClient: true });
+	  mongoose.connect('mongodb://localhost/morenew', { useMongoClient: true });
 	  mongoose.Promise = global.Promise;
+const Schema = mongoose.Schema;
 
 const models = {
-	"_user":mongoose.model('xrp_user', { 
+	"_user":mongoose.model('xrp_user', Schema({ 
+		_id: Schema.Types.ObjectId,
 		username: String,
-		is_waiting_for_sell_sum:String,
-		is_waiting_for_buy_sum:String,
 		first_name:String,
 		last_name:String,
 		is_bot:Boolean,
@@ -19,10 +19,13 @@ const models = {
 		currency:String,
 		xrp_secret:String,
 		wallet:String,
+		offers: [{ type: Schema.Types.ObjectId, ref: 'xrp_offer' }],
+		trades: [{ type: Schema.Types.ObjectId, ref: 'xrp_trade' }],
 		updated: { type: Date, default: Date.now }, 
-	}),
-	"_offer":mongoose.model('xrp_offer', {
-		author:String,
+	})),
+	"_offer":mongoose.model('xrp_offer', Schema({
+		_id: Schema.Types.ObjectId,
+		author:{ type: Schema.Types.ObjectId, ref: 'xrp_user' },
 		name: String, 
 		price:Number,
 		currency:String,
@@ -32,10 +35,12 @@ const models = {
 		min_value:Number, 
 		max_value:Number, 
   		updated: { type: Date, default: Date.now } 
- 	}),
-	"_trade":mongoose.model('xrp_trade', {
-		buyer:String,
-		seller:String,
+ 	})),
+	"_trade":mongoose.model('xrp_trade', Schema({
+		_id: Schema.Types.ObjectId,
+		offer:{ type: Schema.Types.ObjectId, ref: 'xrp_offer' },
+		buyer:{ type: Schema.Types.ObjectId, ref: 'xrp_user' },
+		seller:{ type: Schema.Types.ObjectId, ref: 'xrp_user' },
 		name: String, 
 		volume:Number,
 		currency: String,
@@ -43,7 +48,7 @@ const models = {
 		blocked:Boolean,
 		done:Boolean,
   		updated: { type: Date, default: Date.now } 
- 	}),
+ 	})),
  	"_currency":mongoose.model("xrp_currency", {
  		name:String,
  		code:String,

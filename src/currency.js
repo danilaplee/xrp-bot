@@ -6,6 +6,7 @@ const api = new RippleAPI({
 
 const xrp_usd = "https://api.cryptonator.com/api/ticker/xrp-usd"
 const xrp_rur = "https://api.cryptonator.com/api/ticker/xrp-rur"
+//https://min-api.cryptocompare.com/data/price?fsym=XRP&tsyms=BTC,USD,EUR,RUR
 
 
 class Currency {
@@ -24,6 +25,7 @@ class Currency {
 				})
 			})
 		}
+
 		this.xrp_rur = () => {
 			return new Promise(resolve => {
 				request(xrp_rur, function (error, response, body) {
@@ -31,9 +33,12 @@ class Currency {
 				})
 			})
 		}
+
 		this.reloadPrices = () => {
+		
 			this.xrp_usd().then(data=>{ this.usd = JSON.parse(data).ticker.price })
 			this.xrp_rur().then(data=>{ this.rur = JSON.parse(data).ticker.price })
+		
 		}
 		setInterval(this.reloadPrices, 60000)
 		this.reloadPrices()

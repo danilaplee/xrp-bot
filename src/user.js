@@ -5,12 +5,22 @@ const currencies = require("./const/currencies")
 const banks 	= require("./const/banks") 
 const Markup 	= require('telegraf/markup')
 const mSession 	= require("./mongoSession")
+const mongoose 	= require('mongoose');
 const mongoSession 		= mSession.mongoSession
 const mongoSessionUpdate = mSession.mongoSessionUpdate
 var currency = {};
 
-const mainMenu = (ctx) => {
+const selectCurrency = ctx => {
+	const lang = ctx.session_data.language
+	const select_currency = language[lang].select_currency
+	return ctx.reply(select_currency, Markup
+    .keyboard([currencies])
+    .oneTime()
+    .resize()
+    .extra())
+}
 
+const mainMenu = (ctx) => {
 	const lang = ctx.session_data.language 
 	const welcome = language[lang].welcome
 	const market = ctx.session_data.currency + " / XRP"
@@ -30,7 +40,7 @@ const mainMenu = (ctx) => {
 	    ]
 	if(ctx.session_data.wallet) keyboard.push([Markup.callbackButton(language[lang].transfer_xrp, 'transfer_xrp')])
 	return ctx.reply(text, {parse_mode:"Markdown"}).then(()=>{
-		ctx.reply(menu_text,Markup.inlineKeyboard(keyboard).resize().extra())
+		ctx.reply(menu_text, Markup.inlineKeyboard(keyboard).resize().extra())
 	})
 }
 
@@ -42,15 +52,7 @@ module.exports.injectServices = (services) => {
 
 module.exports.mainMenu = mainMenu
 
-module.exports.selectCurrency = ctx => {
-	const lang = ctx.session_data.language
-	const select_currency = language[lang].select_currency
-	return ctx.reply(select_currency, Markup
-    .keyboard([currencies])
-    .oneTime()
-    .resize()
-    .extra())
-}
+module.exports.selectCurrency = selectCurrency
 
 module.exports.selectLanguage = ctx => {
 	return ctx.reply('Select a language in the list', Markup
@@ -86,6 +88,7 @@ module.exports.setLanguage = (ctx, language) => {
 
 module.exports.setCurrency = (ctx, currency) => {
 	var old;
+	console.log("setting currency")
 	return new Promise((resolve, reject) => {
 		model._user.update(
 		   { telegram_id: ctx.id },
@@ -114,6 +117,7 @@ module.exports.createUser = (ctx) => {
 	return new Promise((resolve, reject) => {
 		const new_user = 
 		{
+  			_id: new mongoose.Types.ObjectId(),
 			username:from.username,
 			first_name:from.first_name,
 			last_name:from.last_name,

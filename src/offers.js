@@ -6,23 +6,32 @@ const model 	 		= require("./model")
 const languages 		= require("./const/languages")
 const currencies 		= require("./const/currencies")
 const banks 			= require("./const/banks") 
-const language 	= require("./language")
+const mongoose 			= require('mongoose');
+const language 			= require("./language")
+const { single_offer }	= require("./templates")
 var currency, user;
 
 
 const bankKeyboard = (ctx, operation) => {
 	const lang = ctx.session_data.language
 	const c = ctx.session_data.currency
-	const b = banks[c]
+	const b = []
 	const keyboard = []
-	for (var i = 0; i < b.length; i++) {
-		for (var d = 0; d < b[i].length; d++) {
-			if(!keyboard[i]) keyboard[i] = []
-			const url = operation+"bank:"+b[i][d]
-			keyboard[i].push(Markup.callbackButton(b[i][d], url))
+	model._offer.find({"type":operation,"currency":c}).distinct("bank", function(err, data)
+	{
+		if(data.length == 0) return ctx.reply(language[lang].no_operations)
+
+		for (var i = 0; i < data.length; i++) b[i] = [data[i]]
+
+		for (var i = 0; i < b.length; i++) {
+			for (var d = 0; d < b[i].length; d++) {
+				if(!keyboard[i]) keyboard[i] = []
+				const url = operation+"bank:"+b[i][d]
+				keyboard[i].push(Markup.callbackButton(b[i][d], url))
+			}
 		}
-	}
-	return ctx.reply(language[lang].sell_xrp_select_bank,Markup.inlineKeyboard(keyboard).resize().extra())
+		return ctx.reply(language[lang].sell_xrp_select_bank,Markup.inlineKeyboard(keyboard).resize().extra())
+	})
 }
 
 const bankFind = (bank, type) => {
@@ -31,6 +40,7 @@ const bankFind = (bank, type) => {
 		._offer
 		.find({bank:bank, type:type})
 		.sort({ price: -1 })
+		.populate("author")
 		.exec(function(err, _data)
 		{
 			if(err) return rej(err)
@@ -38,6 +48,7 @@ const bankFind = (bank, type) => {
 		})
 	})
 }
+
 const bankReply = (ctx, bank, type) => {
 	const lang = ctx.session_data.language
 	const no_offers = language[lang].no_offers
@@ -46,10 +57,16 @@ const bankReply = (ctx, bank, type) => {
 		if(_data.length == 0) return ctx.reply(no_offers)
 		var title = language[lang][type+"_orders"] + " " + bank
 		var keyboard = []
-		for (var i = 0; i < _data.length; i++) {
-			const text = _data[i].name + ": " + _data[i].bank + " / " + _data[i].price + " " + _data[i].currency
-			keyboard.push([])
-			keyboard[i].push(Markup.callbackButton(text, "open_offer:"+_data[i]._id))
+		try {
+			for (var i = 0; i < _data.length; i++) {
+				if(!_data[i] || !_data[i].price) continue;
+				const text = _data[i].price + " " + _data[i].currency + " @" + _data[i].author.username
+				keyboard.push([Markup.callbackButton(text, "open_offer:"+_data[i]._id)])
+			}
+		}
+		catch(err) {
+			console.error("==== bank reply error ====")
+			console.error(err)
 		}
 		ctx.reply(title,Markup.inlineKeyboard(keyboard).resize().extra())
 	})
@@ -85,10 +102,10 @@ module.exports.my_offers 	= (ctx) => {
 			if(_data.length == 0) return ctx.reply(no_my_offers)
 			var keyboard = []
 			for (var i = 0; i < _data.length; i++) {
+				if(!_data[i] || !_data[i].price) continue;
 				const operation = _data[i].type
 				const text = operation+": "+_data[i].name + ": " + _data[i].bank + " / " + _data[i].price + " " + _data[i].currency
-				keyboard.push([])
-				keyboard[i].push(Markup.callbackButton(text, "edit_offer:"+_data[i]._id))
+				keyboard.push([Markup.callbackButton(text, "edit_offer:"+_data[i]._id)])
 			}
 			ctx.reply(your_offers,Markup.inlineKeyboard(keyboard).resize().extra())
 		})
@@ -115,8 +132,20 @@ module.exports.delete_offer = (ctx, id) => {
 
 module.exports.open_offer = (ctx, id) => {
 
-	model._offer.find({_id:id}).exec(function(err, _data){
-		console.log(_data)
+	return new Promise((res,rej) => {
+		model._offer.find({_id:id}).populate("author").exec((err, _data)=>{
+			if(err) return rej(err)
+			if(_data.length == 0) return res(null);
+			res(_data)
+		})
+	})
+	.then((d) => {
+		if(!d) return null;
+		const template = single_offer(ctx, d[0])
+		return ctx.reply(template)
+	})
+	.then(() => {
+		console.log("after html template")
 	})
 
 }
@@ -258,20 +287,19 @@ const submitOfferInfo = (ctx, type) => {
 const submitOffer = ctx => {
 	const lang = ctx.session_data.language
 	const offer = ctx.scene.state.offer
+	offer._id = new mongoose.Types.ObjectId()
 	if(ctx.message.text == language[lang].save) {
 		var o = new model._offer(offer)
 			o.save(function(err, data) 
 			{
 		    	console.log('======= new offer =====');
-		    	console.log(data)
+		    	console.log(data[0])
 		    	module.exports.my_offers(ctx)
 			});
 	}
 }
 
 const cancelOffer = (ctx) => {
-	console.log("on leave scene")
-	console.log(ctx)
 	user.mainMenu(ctx)	
 	ctx.scene.leave()
 }
@@ -306,8 +334,7 @@ const rewindOffer = (ctx) => {
 	}
 }
 
-offerScene.enter((ctx) => {
-	console.log("on enter scene")
+offerScene.enter(ctx => {
 	ctx.scene.state = {
 		"entering_type":true,
 		"offer":{

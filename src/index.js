@@ -20,16 +20,10 @@ const 	offers 		= require("./offers")
 const 	mSession 	= require("./mongoSession")
 
 //////ASSIGN GLOBALS///////
+const {setLanguage, setCurrency, selectLanguage, selectCurrency, createUser} = user;
 
-const selectCurrency 	= user.selectCurrency
-const selectLanguage 	= user.selectLanguage
-const setLanguage 		= user.setLanguage
-const setCurrency 		= user.setCurrency
-const createUser 		= user.createUser
-const mongoSession 		= mSession.mongoSession
-const mongoSessionUpdate = mSession.mongoSessionUpdate
+const {mongoSession, mongoSessionUpdate} = mSession;
 
-///////////////////////////////////////////
 const MAIN_BOT_TOKEN = "504639171:AAE-W3XHavp1UtTfnXTWVSdg6QVghEvatLA"
 const DEV_BOT_TOKEN = "456077044:AAHrjwmWh068po1aqnnxIs4q5L0Pws_9IIA"
 const dev_url 	= 't.me/rippletestbot?'

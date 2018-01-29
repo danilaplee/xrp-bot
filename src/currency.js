@@ -6,7 +6,7 @@ const api = new RippleAPI({
 
 const xrp_usd = "https://api.cryptonator.com/api/ticker/xrp-usd"
 const xrp_rur = "https://api.cryptonator.com/api/ticker/xrp-rur"
-//https://min-api.cryptocompare.com/data/price?fsym=XRP&tsyms=BTC,USD,EUR,RUR
+const multi_xrp = "https://min-api.cryptocompare.com/data/price?fsym=XRP&tsyms=BTC,USD,EUR,RUR"
 
 
 class Currency {
@@ -15,29 +15,33 @@ class Currency {
 		this.api = api
 		
 		this.api.connect().then(() => {
-			console.log(this.api.isConnected())
+			console.log("connected to riple network == "+this.api.isConnected())
 		})
 
-		this.xrp_usd = () => {
+		this.multi_xrp = () => {
 			return new Promise(resolve => {
-				request(xrp_usd, function (error, response, body) {
+				request(multi_xrp, function (error, response, body) {
 					resolve(body)
 				})
 			})
-		}
 
-		this.xrp_rur = () => {
-			return new Promise(resolve => {
-				request(xrp_rur, function (error, response, body) {
-					resolve(body)
-				})
-			})
 		}
 
 		this.reloadPrices = () => {
 		
-			this.xrp_usd().then(data=>{ this.usd = JSON.parse(data).ticker.price })
-			this.xrp_rur().then(data=>{ this.rur = JSON.parse(data).ticker.price })
+			this.multi_xrp().then(data=>{ 
+
+				const d = JSON.parse(data)
+				console.log("=====================")
+				console.log("cryptocompare result:")
+				console.log(d)
+				console.log("=====================")
+				this.usd = d.USD
+				this.rur = d.RUR
+				this.eur = d.EUR
+				this.btc = d.BTC
+
+			})
 		
 		}
 		setInterval(this.reloadPrices, 60000)

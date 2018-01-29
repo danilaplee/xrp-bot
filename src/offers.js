@@ -176,6 +176,7 @@ const option_keyboard = ctx => {
     .resize()
     .extra())
 }
+
 const save_offer_keyboard = ctx => {
 	console.log("==== save_keyboard =====")
 	const lang = ctx.session_data.language
@@ -343,6 +344,10 @@ offerScene.enter(ctx => {
 		}
 	}
 	option_keyboard(ctx)
+})
+
+offerScene.leave(ctx => {
+	console.log(ctx.scene.state)
 })
 
 offerScene.on('text', (ctx) => {

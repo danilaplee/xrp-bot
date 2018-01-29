@@ -1,11 +1,14 @@
 const language 	= require("./language")
 const model 	= require("./model")
 const languages = require("./const/languages")
-const currencies = require("./const/currencies")
+const currencies= require("./const/currencies")
 const banks 	= require("./const/banks") 
 const Markup 	= require('telegraf/markup')
+const Stage 	= require('telegraf/stage')
+const Scene 	= require('telegraf/scenes/base')
 const mSession 	= require("./mongoSession")
 const mongoose 	= require('mongoose');
+const emojiStrip = require('emoji-strip')
 const mongoSession 		= mSession.mongoSession
 const mongoSessionUpdate = mSession.mongoSessionUpdate
 var currency = {};
@@ -20,6 +23,43 @@ const selectCurrency = ctx => {
     .extra())
 }
 
+/////////////////// MAIN SCENE /////////////////// 
+
+const mainMenuScene = new Scene('mainMenu')
+
+const mainMenuKeyboard = function(ctx) {
+
+	console.log("==== main_menu_keyboard =====")
+	const lang 	= ctx.session_data.language
+	const l 	= language[lang]
+	const keyboard = [[l.wallet, l.menu_text]]
+
+	return ctx.reply("/",Markup.keyboard(keyboard)
+    .resize()
+    .extra())
+}
+
+mainMenuScene.enter(ctx => {
+	return mainMenuKeyboard(ctx)
+})
+
+mainMenuScene.on("text", ctx => {
+	// i
+	const text = ctx.message.text.toString();
+	const lang = ctx.session_data.language
+	// console.log(emojiStrip(text), emojiStrip(language[lang].wallet), emojiStrip(text) === emojiStrip(language[lang].wallet))
+	if(text == language[lang].menu_text) return mainMenu(ctx);
+	if(text == language[lang].wallet.toString()) return module.exports.openWallet(ctx);
+
+	if(text == '🇺🇸 English') return module.exports.setLanguage(ctx, "english")
+	if(text == '🇷🇺 Русский') return module.exports.setLanguage(ctx, "russian")
+	if(text == '🇺🇸 USD') return module.exports.setCurrency(ctx, "USD")
+	if(text == '🇷🇺 RUR') return module.exports.setCurrency(ctx, "RUR")
+	return mainMenuKeyboard(ctx)
+})
+
+/////////////////// MAIN SCENE /////////////////// 
+
 const mainMenu = (ctx) => {
 	const lang = ctx.session_data.language 
 	const welcome = language[lang].welcome
@@ -30,17 +70,22 @@ const mainMenu = (ctx) => {
 	const text = welcome+"\n"+price+""+"\n"+balance
 	const menu_text = language[lang].menu_text
 	const keyboard = [
-			[Markup.callbackButton(language[lang].currency, 'currency')],
-			[Markup.callbackButton(language[lang].wallet, 'wallet')],
-		    [Markup.callbackButton(language[lang].buy_xrp, 'buy_xrp')],
-		    [Markup.callbackButton(language[lang].sell_xrp, 'sell_xrp')],
-		    [Markup.callbackButton(language[lang].create_offer, 'create_offer')],
-		    [Markup.callbackButton(language[lang].my_offers, 'my_offers')],
-		    [Markup.callbackButton(language[lang].change_language, 'change_language')]
-	    ]
-	if(ctx.session_data.wallet) keyboard.push([Markup.callbackButton(language[lang].transfer_xrp, 'transfer_xrp')])
+		[Markup.callbackButton(language[lang].currency, 'currency')],
+		[Markup.callbackButton(language[lang].wallet, 'wallet')],
+	    [Markup.callbackButton(language[lang].buy_xrp, 'buy_xrp')],
+	    [Markup.callbackButton(language[lang].sell_xrp, 'sell_xrp')],
+	    [Markup.callbackButton(language[lang].create_offer, 'create_offer')],
+	    [Markup.callbackButton(language[lang].my_offers, 'my_offers')],
+	    [Markup.callbackButton(language[lang].change_language, 'change_language')],
+	    [Markup.callbackButton(language[lang].transfer_xrp, 'transfer_xrp')]
+    ]
 	return ctx.reply(text, {parse_mode:"Markdown"}).then(()=>{
-		ctx.reply(menu_text, Markup.inlineKeyboard(keyboard).resize().extra())
+		return ctx.reply(menu_text, Markup.inlineKeyboard(keyboard).resize().extra())
+	})
+	.then(()=>{
+		console.log(ctx.scene, ctx.scene.current, ctx.scene.id)
+		if(ctx.scene && ctx.scene.state == "mainMenu") return;
+		return ctx.scene.enter("mainMenu")
 	})
 }
 
@@ -115,6 +160,7 @@ module.exports.createUser = (ctx) => {
 	if(ctx.update.message.from.id) from = ctx.update.message.from
 	if(ctx.from.id) from = ctx.from
 	return new Promise((resolve, reject) => {
+		console.log(from)
 		const new_user = 
 		{
   			_id: new mongoose.Types.ObjectId(),
@@ -180,3 +226,6 @@ module.exports.openWallet = (ctx) => {
 	.then(sendUI);
 	sendUI()
 }
+
+
+module.exports.scenes = [mainMenuScene]

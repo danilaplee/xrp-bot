@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "emoji-strip": "^1.0.1",
     "mongoose": "^4.13.9",
     "request": "^2.83.0",
     "ripple-lib": "^0.17.9",

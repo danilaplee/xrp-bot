@@ -3,7 +3,6 @@ const 	Telegraf 	= require('telegraf')
 const 	Router 		= require('telegraf/router')
 const 	Composer 	= require('telegraf/composer')
 const 	Extra 		= require('telegraf/extra')
-const 	session 	= require('telegraf/session')
 const 	Stage 		= require('telegraf/stage')
 const 	Markup 		= require('telegraf/markup')
 
@@ -15,7 +14,10 @@ const 	user 		= require("./user")
 		user.injectServices({"currency":currency})
 
 const 	offers 		= require("./offers")
-		offers.injectServices({"currency":currency})
+		offers.injectServices({"currency":currency, "user":user})
+
+const 	trade 		= require("./trade")
+		trade.injectServices({"currency":currency, "user":user})
 
 const 	mSession 	= require("./mongoSession")
 
@@ -36,13 +38,15 @@ const currencies 	= require("./const/currencies")
 const banks 		= require("./const/banks") 
 const language 		= require("./language")
 
-var scenes = offers.scenes
-const stage = new Stage()
-const register_scenes = scenes => { for (var i = scenes.length - 1; i >= 0; i--) stage.register(scenes[i]) }
+const session 		= require('telegraf/session')
+bot.use(session())
+
+const stage 			= new Stage()
+const register_scenes 	= scenes => { for (var i = scenes.length - 1; i >= 0; i--) stage.register(scenes[i]) }
+
 register_scenes(offers.scenes)
 register_scenes(user.scenes)
-
-bot.use(session())
+register_scenes(trade.scenes)
 
 bot.use(mongoSession)
 
@@ -50,10 +54,13 @@ bot.use(stage.middleware())
 
 bot.command('start', ctx => {
 	
+	////////CREATE USER && SELECT LANGUAGE///////
+
 	if(ctx.session_data == null) return createUser(ctx)
 	.then(context => selectLanguage(context))
 	.catch(err => console.error(err))
-	///////
+
+	///////CLEAR STATE && SELECT LANGUAGE///////
 
 	mongoSessionUpdate(ctx, {is_waiting_for_sell_sum:null, is_waiting_for_buy_sum:null})
 	.then(cc=>selectLanguage(cc))
@@ -102,15 +109,19 @@ bot.action("my_offers", 	ctx => offers.my_offers(ctx))
 bot.action("wallet", 		ctx => user.openWallet(ctx))
 
 
-bot.on('callback_query', ctx => {
+bot.on('callback_query', (ctx, next) => {
 	if(!ctx || !ctx.update || !ctx.update.callback_query.data) return;
 	const data = ctx.update.callback_query.data.split(":")
 	const action = data[0]
-	if(action == "buybank") 	return offers.BankBuy(ctx, data[1])
-	if(action == "sellbank") 	return offers.BankSell(ctx, data[1]) 
-	if(action == "edit_offer") 	return offers.edit_offer(ctx, data[1])
-	if(action == "delete_offer") return offers.delete_offer(ctx, data[1])
-	if(action == "open_offer") 	return offers.open_offer(ctx, data[1])
+	if(action == "buybank") 	 offers.BankBuy(ctx, data[1])
+	if(action == "sellbank") 	 offers.BankSell(ctx, data[1]) 
+	if(action == "edit_offer") 	 offers.edit_offer(ctx, data[1])
+	if(action == "delete_offer") offers.delete_offer(ctx, data[1])
+	if(action == "open_offer") 	 offers.open_offer(ctx, data[1])
+	if(action == "buy_offer") 	 trade.create_trade(ctx, data[1])
+	if(action == "cancel_trade") trade.cancel_trade(ctx, data[1])
+	if(action == "confirm_trade") trade.confirm_trade(ctx, data[1])
+	return next()
 })
 
 bot.startPolling()

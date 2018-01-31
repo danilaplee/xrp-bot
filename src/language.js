@@ -59,7 +59,14 @@ module.exports =
 		"total1_buy":"Через это объявление можно купить Ripple-XRP по курсу: ",
 		"total2":"На сумму от - до: ",
 		"description":"Описание сделки",
-		"mainMenuScene":"Главное меню"
+		"mainMenuScene":"Главное меню",
+		"buy_offer":"Начать сделку",
+		"enter_trade_sum":"Введите сумму сделки от {min} {currency} до {max} {currency}",
+		"confirm_trade":"Подтвердите начало сделки",
+		"confirm":"Подтверждаю",
+		"trade_canceled":"Сделка отменена",
+		"trade_confirmed":"Сделка подтверждена",
+		"waiting_for_trader":"Ожидаем трейдера, если сделка не будет подтверждена в течении 5 минут она отменится автоматически"
 	},
 	"english":
 	{
@@ -117,6 +124,13 @@ module.exports =
 		"total1_buy":"Using this offer you can buy XRP: ",
 		"total2":"for the amount min - max: ",
 		"description":"Offer description",
-		"mainMenuScene":"Main menu" 
+		"mainMenuScene":"Main menu",
+		"buy_offer":"Start Trade",
+		"enter_trade_sum":"Enter a trade amount starting from {min} {currency} to the maximum of {max} {currency}",
+		"confirm_trade":"Confirm start of trade",
+		"confirm":"Confirm",
+		"trade_canceled":"Сделка отменена",
+		"trade_confirmed":"Сделка подтверждена",
+		"waiting_for_trader":"Waiting for remote trader, if the trade shall not be confirmed in 5 minutes it will be canceled"
 	}
 }

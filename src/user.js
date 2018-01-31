@@ -44,13 +44,10 @@ mainMenuScene.enter(ctx => {
 })
 
 mainMenuScene.on("text", ctx => {
-	// i
 	const text = ctx.message.text.toString();
 	const lang = ctx.session_data.language
-	// console.log(emojiStrip(text), emojiStrip(language[lang].wallet), emojiStrip(text) === emojiStrip(language[lang].wallet))
 	if(text == language[lang].menu_text) return mainMenu(ctx);
 	if(text == language[lang].wallet.toString()) return module.exports.openWallet(ctx);
-
 	if(text == '🇺🇸 English') return module.exports.setLanguage(ctx, "english")
 	if(text == '🇷🇺 Русский') return module.exports.setLanguage(ctx, "russian")
 	if(text == '🇺🇸 USD') return module.exports.setCurrency(ctx, "USD")
@@ -80,10 +77,9 @@ const mainMenu = (ctx) => {
 	    [Markup.callbackButton(language[lang].transfer_xrp, 'transfer_xrp')]
     ]
 	return ctx.reply(text, {parse_mode:"Markdown"}).then(()=>{
-		return ctx.reply(menu_text, Markup.inlineKeyboard(keyboard).resize().extra())
+		return ctx.reply(menu_text, Markup.inlineKeyboard(keyboard).extra())
 	})
 	.then(()=>{
-		console.log(ctx.scene, ctx.scene.current, ctx.scene.id)
 		if(ctx.scene && ctx.scene.state == "mainMenu") return;
 		return ctx.scene.enter("mainMenu")
 	})

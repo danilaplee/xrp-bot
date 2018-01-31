@@ -1,7 +1,6 @@
 const Markup 			= require('telegraf/markup')
 const Stage 			= require('telegraf/stage')
 const Scene 			= require('telegraf/scenes/base')
-const { enter, leave } 	= Stage
 const model 	 		= require("./model")
 const languages 		= require("./const/languages")
 const currencies 		= require("./const/currencies")
@@ -107,8 +106,11 @@ module.exports.my_offers 	= (ctx) => {
 				const text = operation+": "+_data[i].name + ": " + _data[i].bank + " / " + _data[i].price + " " + _data[i].currency
 				keyboard.push([Markup.callbackButton(text, "edit_offer:"+_data[i]._id)])
 			}
-			ctx.reply(your_offers,Markup.inlineKeyboard(keyboard).resize().extra())
+			return ctx.reply(your_offers,Markup.inlineKeyboard(keyboard).resize().extra())
 		})
+		.then(()=>{
+			return ctx.scene.enter("mainMenu");
+		}).then(res)
 	})
 }
 
@@ -119,7 +121,7 @@ module.exports.edit_offer   = (ctx, id) => {
 	model._offer.find({_id:id}).exec(function(err, _data){
 		if(_data.length == 0) return user.mainMenu(ctx);
 		const frase = language[lang].edit_question + _data[0].name + "?"
-		const keyboard = Markup.inlineKeyboard([Markup.callbackButton(cancel, "menu"), Markup.callbackButton(remove, "delete_offer:"+id)])
+		const keyboard = Markup.inlineKeyboard([Markup.callbackButton(remove, "delete_offer:"+id)])
 		return ctx.reply(frase, keyboard.oneTime().resize().extra());
 	})
 } 
@@ -131,7 +133,7 @@ module.exports.delete_offer = (ctx, id) => {
 }
 
 module.exports.open_offer = (ctx, id) => {
-
+	const lang = ctx.session_data.language
 	return new Promise((res,rej) => {
 		model._offer.find({_id:id}).populate("author").exec((err, _data)=>{
 			if(err) return rej(err)
@@ -142,7 +144,9 @@ module.exports.open_offer = (ctx, id) => {
 	.then((d) => {
 		if(!d) return null;
 		const template = single_offer(ctx, d[0])
-		return ctx.reply(template)
+		const buy_text = language[lang].buy_offer
+		const keyboard = Markup.inlineKeyboard([Markup.callbackButton(buy_text, "buy_offer:"+id)])
+		return ctx.reply(template, keyboard.oneTime().resize().extra())
 	})
 	.then(() => {
 		console.log("after html template")
@@ -239,8 +243,8 @@ const submitOfferInfo = (ctx, type) => {
 	const input 			= ctx.message.text
 	if(type == "type") 
 	{
-		if(ctx.message.text == language[lang].offer_type_sell) ctx.scene.state.offer.type = "sell"
-		if(ctx.message.text == language[lang].offer_type_buy) ctx.scene.state.offer.type = "buy"
+		if(ctx.message.text == language[lang].offer_type_sell) ctx.scene.state.offer.type = "buy"
+		if(ctx.message.text == language[lang].offer_type_buy) ctx.scene.state.offer.type = "sell"
 		if(!ctx.scene.state.offer.type) return sendSubmitOfferError(ctx, type);
 		ctx.scene.state.entering_type = false
 		ctx.scene.state.entering_name = true
@@ -301,8 +305,7 @@ const submitOffer = ctx => {
 }
 
 const cancelOffer = (ctx) => {
-	user.mainMenu(ctx)	
-	ctx.scene.leave()
+	ctx.scene.enter("mainMenu")
 }
 
 const rewindOffer = (ctx) => {

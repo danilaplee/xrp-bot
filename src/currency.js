@@ -1,7 +1,7 @@
 const RippleAPI = require('ripple-lib').RippleAPI;
 const request = require("request")
 const api = new RippleAPI({
-  	server: 'wss://s1.ripple.com' // Public rippled server
+  	server: 'wss://s.altnet.rippletest.net:51233' // Public rippled server
 });
 
 const xrp_usd = "https://api.cryptonator.com/api/ticker/xrp-usd"

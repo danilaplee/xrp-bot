@@ -10,10 +10,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "connect-mongo": "^2.0.1",
     "emoji-strip": "^1.0.1",
+    "express-session": "^1.15.6",
     "mongoose": "^4.13.9",
+    "mongoose-float": "^1.0.2",
+    "mongoose-session": "0.0.4",
     "request": "^2.83.0",
     "ripple-lib": "^0.17.9",
-    "telegraf": "^3.17.3"
+    "telegraf": "^3.17.3",
+    "telegraf-session-redis": "^5.0.0"
   }
 }

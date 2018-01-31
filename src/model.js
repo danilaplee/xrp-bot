@@ -1,5 +1,6 @@
 const mongoose 	= require('mongoose');
-	  mongoose.connect('mongodb://localhost/morenew', { useMongoClient: true });
+	  mongoose.connect('mongodb://localhost/test', { useMongoClient: true });
+const Float = require('mongoose-float').loadType(mongoose);
 	  mongoose.Promise = global.Promise;
 const Schema = mongoose.Schema;
 
@@ -42,10 +43,19 @@ const models = {
 		buyer:{ type: Schema.Types.ObjectId, ref: 'xrp_user' },
 		seller:{ type: Schema.Types.ObjectId, ref: 'xrp_user' },
 		name: String, 
-		volume:Number,
+		volume:Float,
+		crypto_volume:Float,
+		comission:Float,
 		currency: String,
+		rate:Float,
 		method:String,
-		blocked:Boolean,
+		garant_id:String,
+		garant_key:String,
+		seller_paid:Boolean,
+		buyer_received:Boolean,
+		seller_confirmed:Boolean,
+		buyer_confirmed:Boolean,
+		canceled:Boolean,
 		done:Boolean,
   		updated: { type: Date, default: Date.now } 
  	})),

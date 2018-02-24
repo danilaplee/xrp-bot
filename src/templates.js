@@ -12,6 +12,5 @@ module.exports.single_offer = (ctx, data) => {
 		html += "\n"
 		html += "\n"+language[lang]["total1_"+data.type]+""+data.price+" "+data.currency+" "
 		html += "\n"+language[lang].total2+""+data.min_value+" "+data.currency+" - "+data.max_value+" "+data.currency
-
 		return html;
 }

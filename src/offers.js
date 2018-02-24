@@ -8,6 +8,7 @@ const banks 			= require("./const/banks")
 const mongoose 			= require('mongoose');
 const language 			= require("./language")
 const { single_offer }	= require("./templates")
+const { enter, leave } = Stage
 var currency, user;
 
 
@@ -83,7 +84,7 @@ module.exports.BankBuy 		= (ctx, bank) => bankReply(ctx, bank, "buy")
 
 module.exports.BankSell 	= (ctx, bank) => bankReply(ctx, bank, "sell")
 
-module.exports.create_offer = (ctx) => ctx.scene.enter("offer")
+module.exports.create_offer = (ctx) => Stage.enter("offer")
 
 module.exports.my_offers 	= (ctx) => {
 	const lang = ctx.session_data.language
@@ -208,9 +209,9 @@ const sendSubmitOfferError = (ctx, type) => {
 	const lang 					= ctx.session_data.language
 	const invalid_offer_name 	= language[lang].invalid_offer_name
 	const invalid_bank_name 	= language[lang].invalid_bank_name
-	const enter_min_value 		= language[lang].enter_min_value
-	const enter_max_value 		= language[lang].enter_max_value
-	const enter_price 			= language[lang].enter_price
+	const enter_min_value 		= language[lang].enter_min_value.replace("{currency}", ctx.session_data.currency)
+	const enter_max_value 		= language[lang].enter_max_value.replace("{currency}", ctx.session_data.currency)
+	const enter_price 			= language[lang].enter_price.replace("{currency}", ctx.session_data.currency)
 	
 	if(type == "type") return option_keyboard(ctx);
 	if(type == "name") return replyWithFraseAndCancel(ctx,invalid_offer_name);
@@ -235,10 +236,10 @@ const validateInput = (ctx, input, type) => {
 
 const submitOfferInfo = (ctx, type) => {
 	const lang = ctx.session_data.language
-	const enter_min_value 	= language[lang].enter_min_value
-	const enter_max_value 	= language[lang].enter_max_value
+	const enter_min_value 	= language[lang].enter_min_value.replace("{currency}", ctx.session_data.currency)
+	const enter_max_value 	= language[lang].enter_max_value.replace("{currency}", ctx.session_data.currency)
 	const enter_description = language[lang].enter_description
-	const enter_price 		= language[lang].enter_price
+	const enter_price 		= language[lang].enter_price.replace("{currency}", ctx.session_data.currency)
 	const enter_name 		= language[lang].enter_name
 	const input 			= ctx.message.text
 	if(type == "type") 
@@ -304,9 +305,7 @@ const submitOffer = ctx => {
 	}
 }
 
-const cancelOffer = (ctx) => {
-	ctx.scene.enter("mainMenu")
-}
+const cancelOffer = enter("mainMenu")
 
 const rewindOffer = (ctx) => {
 
@@ -339,14 +338,14 @@ const rewindOffer = (ctx) => {
 }
 
 offerScene.enter(ctx => {
-	ctx.scene.state = {
-		"entering_type":true,
-		"offer":{
-			"author":ctx.session_data._id,
-			"currency":ctx.session_data.currency
-		}
-	}
-	option_keyboard(ctx)
+	console.log("==== entered offer scene ====")
+	const lang = ctx.session_data.language
+	const type = language[lang].select_offer_type
+	const keyboard = [language[lang].offer_type_sell, language[lang].offer_type_buy, language[lang].cancel]
+	return ctx.reply(type, Markup.keyboard(keyboard).oneTime().resize().extra()).then(()=>{
+		console.log("==== reply ====")
+		return new Promise(resolve =>resolve(ctx))
+	})
 })
 
 offerScene.leave(ctx => {
@@ -354,6 +353,7 @@ offerScene.leave(ctx => {
 })
 
 offerScene.on('text', (ctx) => {
+	// console.log(ctx.session_data)
 	const lang = ctx.session_data.language
 	if(ctx.message.text == language[lang].cancel) return cancelOffer(ctx)
 	if(ctx.message.text == language[lang].back) return rewindOffer(ctx)

@@ -1,5 +1,5 @@
 const mongoose 	= require('mongoose');
-	  mongoose.connect('mongodb://localhost/test', { useMongoClient: true });
+	  mongoose.connect('mongodb://localhost/test22', { useMongoClient: true });
 const Float = require('mongoose-float').loadType(mongoose);
 	  mongoose.Promise = global.Promise;
 const Schema = mongoose.Schema;

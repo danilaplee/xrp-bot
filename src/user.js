@@ -31,12 +31,16 @@ const mainMenuKeyboard = function(ctx) {
 
 	console.log("==== main_menu_keyboard =====")
 	const lang 	= ctx.session_data.language
+	const market = ctx.session_data.currency + " / XRP"
+	const value = currency[ctx.session_data.currency.toLowerCase()]
+	const price = language[lang].market_price + " *" + value+ " " + market +"*"
 	const l 	= language[lang]
 	const keyboard = [[l.wallet, l.menu_text]]
 
-	return ctx.reply("/",Markup.keyboard(keyboard)
-    .resize()
-    .extra())
+	return ctx.reply(price, {parse_mode:"Markdown"}) 
+	.then(()=>{
+		return ctx.reply("/", Markup.keyboard(keyboard).resize().extra())
+	});
 }
 
 mainMenuScene.enter(ctx => {
@@ -44,6 +48,7 @@ mainMenuScene.enter(ctx => {
 })
 
 mainMenuScene.on("text", ctx => {
+	console.log(ctx.session_data)
 	const text = ctx.message.text.toString();
 	const lang = ctx.session_data.language
 	if(text == language[lang].menu_text) return mainMenu(ctx);
@@ -64,7 +69,7 @@ const mainMenu = (ctx) => {
 	const value = currency[ctx.session_data.currency.toLowerCase()]
 	const price = language[lang].market_price + " *" + value+ " " + market +"*"
 	const balance = ""
-	const text = welcome+"\n"+price+""+"\n"+balance
+	const text = welcome
 	const menu_text = language[lang].menu_text
 	const keyboard = [
 		[Markup.callbackButton(language[lang].currency, 'currency')],
@@ -76,9 +81,8 @@ const mainMenu = (ctx) => {
 	    [Markup.callbackButton(language[lang].change_language, 'change_language')],
 	    [Markup.callbackButton(language[lang].transfer_xrp, 'transfer_xrp')]
     ]
-	return ctx.reply(text, {parse_mode:"Markdown"}).then(()=>{
-		return ctx.reply(menu_text, Markup.inlineKeyboard(keyboard).extra())
-	})
+	return ctx.reply(menu_text,Markup.inlineKeyboard(keyboard).resize().extra())
+	.then(()=>ctx.reply(text, {parse_mode:"Markdown"})) 
 	.then(()=>{
 		if(ctx.scene && ctx.scene.state == "mainMenu") return;
 		return ctx.scene.enter("mainMenu")
@@ -170,11 +174,14 @@ module.exports.createUser = (ctx) => {
 		user.save(function (err, data) 
 		{
 		  	if (err) return reject(err)
-	    	console.log('======= new user =====');
-	    	console.log(data)
+	    	console.log('======= created new user '+from.username+' =====');
+	    	console.log(err)
 	    	model._user.findOne({telegram_id:from.id.toString()}, function(err, data)
 	    	{
-				if(err) console.error(err)
+				if(err) console.error("not found new user err", err)
+
+	    		console.log("======= found user after create ======= ")
+		    	console.log(data)
 				ctx.session_data = data;
 		    	resolve(ctx)
 			})

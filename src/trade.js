@@ -76,14 +76,14 @@ trade_scene.enter((ctx,next) => {
 		enter_trade_sum:false,
 		offer:{}
 	}
-	return next()
+	return next(ctx)
 })
 
 trade_scene.on('text', (ctx, next) => {
 	console.log("entering trade text "+ctx.message.text)
 	console.log(ctx.scene.state)
 	if(ctx.scene.state.enter_trade_sum) enterTradeSum(ctx)
-	next()
+	return next()
 })
 
 module.exports.injectServices = (services) => {
@@ -104,12 +104,14 @@ module.exports.create_trade = (ctx, offer_id) => {
 		.populate("author")
 		.exec((err, _data)=> {
 			if(err) return rej(err)
-			console.log(_data[0], ctx)
-			ctx.scene.enter("trade").then((context)=>{
-				ctx.scene.state.offer = _data[0]; 
-				ctx.scene.state.enter_trade_sum = true;
-				enter_sum = enter_sum.replace("{min}", _data[0].min_value).replace("{max}", _data[0].max_value).replace(/{currency}/g, _data[0].currency)
-				ctx.reply(enter_sum)
+			console.log(_data[0])
+			ctx.scene.enter("trade")
+			ctx.scene.state.offer = _data[0]; 
+			ctx.scene.state.enter_trade_sum = true;
+			enter_sum = enter_sum.replace("{min}", _data[0].min_value).replace("{max}", _data[0].max_value).replace(/{currency}/g, _data[0].currency)
+			ctx
+			.reply(enter_sum)
+			.then((context)=>{
 				res(_data[0]);
 			})
 				
